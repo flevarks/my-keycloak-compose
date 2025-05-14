@@ -4,8 +4,8 @@ My Keycloak compose to deploy Keycloak for development reasons
 # Disable HTTPS
 
 Connect to the docker container
-```
-bash docker exec -it keycloak bash 
+```bash
+ docker exec -it keycloak bash 
 ```
 Sign in through the terminal
 
