@@ -23,7 +23,7 @@ services:
 
   keycloak:
     container_name: keycloak
-    image: kostisfl/keycloak-odin
+    image: kostisfl/keycloak-odin:1.0.0
     depends_on:
       - keycloak-db
     command: start-dev
