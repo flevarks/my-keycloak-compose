@@ -1,0 +1,217 @@
+#Values.yaml file for ODIN-Platform 
+
+# Select if you want to install kafka with persitent volume or ephemeral (db-less).
+# You should select ONE of the two options, never both
+# By default kafka Ephemeral=true
+installEphemeral: true
+installPersistent: false
+
+
+# Values for kafka-persistent template
+
+persistentConfig:
+    clusterName: odin-cluster
+    kafkaVersion: 3.4.0
+    kafkaReplicas: 3
+    replicationFactor: 3
+    zookeeperReplicas: 3
+    nodePort: 32100
+    kafkaStorage: 10Gi
+    zookeeperStorage: 10Gi
+
+
+    ports:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+      - name: external
+        port: 9094
+        type: nodeport
+        tls: false
+        nodePort: 32100
+    
+
+# Values for kafka-ephemeral template 
+ephemeralConfig:
+    clusterName: odin-cluster
+    kafkaVersion: 3.4.0
+    kafkaReplicas: 3
+    replicationFactor: 3
+    transactionStateLogMinIsr: 3
+    minInsyncReplicas: 3
+    zookeeperReplicas: 3
+    nodePort: 32100
+
+    ports:
+      - name: plain
+        port: 9092
+        type: internal
+        tls: false
+      - name: tls
+        port: 9093
+        type: internal
+        tls: true
+      - name: external
+        port: 9094
+        type: nodeport
+        tls: false
+        nodePort: 32100
+
+# Values for kafka topic template 
+
+kafka_topic:
+  - name: odin-platform-robot-status
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-platform-robot-control
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-platform-smartbox-status
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-platform-robot-result
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-sub-response-modal3d-ker
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-pub-request-modal3d-robot
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+    segmentBytes: 1073741824
+  - name: odin-pub-request-modal3d-fixed
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+  - name: odin-pub-request-modal3d-kers 
+    clusterName: odin-cluster
+    partitions: 1
+    replicas: 3
+    retentionMs: 7200000
+  
+
+
+
+# Option to install mosquitto as a local MQTT broker
+mosquitto-chart:
+  enabled: false 
+
+# Option to install Apache Camel Kafka-Connect for applying connectors
+kafka-connect-chart: 
+  enabled: true
+  # Values for KafkaConnector template
+
+  connectConfig:
+  - name: odin-platform-cluster
+    version: 3.4.0
+    image: odin-gitlab.iti.gr:5050/odin/odin-container-registry/kafka-connect-strimzi35:0.1
+    replicas: 3
+    groupID: connect-cluster-sermas
+    offsetStorageTopic: connect-cluster-offsets
+    configStorageTopic: connect-cluster-configs
+    statusStorageTopic: connect-cluster-status
+    keyConverter: org.apache.kafka.connect.json.JsonConverter
+    valueConverter: org.apache.kafka.connect.json.JsonConverter
+    keyConveterSchemasEnabled: true
+    vakyeConverterSchemasEnable: true
+    configStorageReplicationFactor: 3
+    offsetStorageReplicationFactor: 3
+    statusStorageReplicationFactor: 3
+    imagePullSecrets: dockersecret1
+
+    
+  mqtt_to_kafka_connector:
+    - name: camel-mqtt-source-kafka-connector-modal3d-ker
+      connectCluster: odin-platform-cluster
+      tasksMax: 1
+      topics: odin-sub-response-modal3d-ker
+      valueConverters: 
+        - org.apache.kafka.connect.json.JsonConverter
+        - org.apache.kafka.connect.converters.ByteArrayConverter
+      # - io.confluent.connect.json.JsonSchemaConverter
+      mqttTopic: kafka-odin-sub-response-modal3d-ker-mqtt
+      brokerUrl: tcp://odin-platform-mosquitto.odin-platform.svc.cluster.local:1883
+      clientID: robot-status
+      # mqttUser: sermas
+      # mqttPassword: sermas_2024
+  kafka_to_mqtt_connector:
+    - name: camel-mqtt-sink-kafka-request-modal3d-kers
+      connectCluster: odin-platform-cluster
+      tasksMax: 1
+      topics: odin-pub-request-modal3d-kers 
+      valueConverters: 
+        - org.apache.kafka.connect.json.JsonConverter
+        - org.apache.kafka.connect.converters.ByteArrayConverter
+      # - io.confluent.connect.json.JsonSchemaConverter
+      mqttTopic: mqtt-odin-pub-request-modal3d-kers-kafka
+      brokerUrl: tcp://odin-platform-mosquitto.odin-platform.svc.cluster.local:1883
+      # mqttUser: sermas
+      # mqttPassword: sermas_2024
+    - name: camel-mqtt-sink-kafka-request-modal3d-fixed
+      connectCluster: odin-platform-cluster
+      tasksMax: 1
+      topics: odin-pub-request-modal3d-fixedF
+      valueConverters: 
+        - org.apache.kafka.connect.json.JsonConverter
+        - org.apache.kafka.connect.converters.ByteArrayConverter
+      # - io.confluent.connect.json.JsonSchemaConverter
+      mqttTopic: mqtt-odin-pub-request-modal3d-fixed-kafka
+      brokerUrl: tcp://odin-platform-mosquitto.odin-platform.svc.cluster.local:1883
+      # mqttUser: sermas
+      # mqttPassword: sermas_2024
+    - name: camel-mqtt-sink-kafka-request-modal3d-robot
+      connectCluster: odin-platform-cluster
+      tasksMax: 1
+      topics: odin-pub-request-modal3d-robot 
+      valueConverters: 
+        - org.apache.kafka.connect.json.JsonConverter
+        - org.apache.kafka.connect.converters.ByteArrayConverter
+      # - io.confluent.connect.json.JsonSchemaConverter
+      mqttTopic: mqtt-odin-pub-request-modal3d-robot-kafka
+      brokerUrl: tcp://odin-platform-mosquitto.odin-platform.svc.cluster.local:1883
+      # mqttUser: sermas
+      # mqttPassword: sermas_2024
+      #clientID: odin-platform-rtls-positions
+      # mqttUser: test
+
+# Option to install Apache Nifi for applying connectors
+nifi: 
+  enabled: false
+modal3d: 
+  enabled: true
+  frontendModal3d:
+    serverURL: http://160.40.55.237:30013 # NodeIP:nodeport the IP of the cluster
+    keycloakURL: http://160.40.55.237:8180/ # keycloakIP: port
+    keycloakClientID: modal3d
+    keycloakRealm: ODIN
+  backendModal3d: 
+    kafkaKERsTopic: odin-pub-request-modal3d-kers 
+    kafkaFixedTopic: odin-pub-request-modal3d-fixed
+    kafkaRobotTopic: odin-pub-request-modal3d-robot
+    kafkaSubTopic: odin-sub-response-modal3d-ker
+    groupID: backend-modal3d 
+
+
